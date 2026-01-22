@@ -3,17 +3,32 @@ import pickle
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import os
 
 # ------------------------------
-# Load saved files
+# Page Config
+# ------------------------------
+st.set_page_config(
+    page_title="Next Word Predictor",
+    page_icon="🧠",
+    layout="centered"
+)
+
+# ------------------------------
+# Load saved files (Safe paths)
 # ------------------------------
 @st.cache_resource
 def load_resources():
-    model = load_model("lstm_model.h5")
-    with open("tokenizer.pkl", "rb") as f:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    model = load_model(os.path.join(base_dir, "lstm_model.h5"))
+
+    with open(os.path.join(base_dir, "tokenizer.pkl"), "rb") as f:
         tokenizer = pickle.load(f)
-    with open("max_len.pkl", "rb") as f:
+
+    with open(os.path.join(base_dir, "max_len.pkl"), "rb") as f:
         max_len = pickle.load(f)
+
     return model, tokenizer, max_len
 
 model, tokenizer, max_len = load_resources()
@@ -23,7 +38,7 @@ model, tokenizer, max_len = load_resources()
 # ------------------------------
 def predict_next_word(text):
     sequence = tokenizer.texts_to_sequences([text])[0]
-    sequence = pad_sequences([sequence], maxlen=max_len-1, padding='pre')
+    sequence = pad_sequences([sequence], maxlen=max_len - 1, padding="pre")
 
     preds = model.predict(sequence, verbose=0)
     predicted_index = np.argmax(preds)
@@ -31,27 +46,80 @@ def predict_next_word(text):
     for word, index in tokenizer.word_index.items():
         if index == predicted_index:
             return word
-    return ""
+    return "❓"
 
 # ------------------------------
-# Streamlit UI
+# UI Header
 # ------------------------------
-st.set_page_config(page_title="Next Word Prediction", layout="centered")
+st.markdown(
+    """
+    <div style="text-align:center;">
+        <h1>🧠 Next Word Predictor</h1>
+        <p style="font-size:18px;">
+            LSTM-based Deep Learning model that predicts the <b>next word</b>
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-st.title("🧠 Next Word Prediction (LSTM)")
-st.write("Enter a sentence and the model will predict the **next word**.")
+st.markdown("---")
 
-user_input = st.text_input("✍️ Enter text:", placeholder="Type a sentence here...")
+# ------------------------------
+# Input Section (Card Style)
+# ------------------------------
+with st.container():
+    st.markdown("### ✍️ Enter your sentence")
+    user_input = st.text_input(
+        "",
+        placeholder="Example: I am learning machine"
+    )
 
-if st.button("Predict Next Word"):
+# ------------------------------
+# Button + Output
+# ------------------------------
+col1, col2, col3 = st.columns([1, 2, 1])
+
+with col2:
+    predict_btn = st.button("🚀 Predict Next Word", use_container_width=True)
+
+if predict_btn:
     if user_input.strip() == "":
-        st.warning("Please enter some text.")
+        st.warning("⚠️ Please enter some text.")
     else:
         next_word = predict_next_word(user_input)
-        st.success(f"**Predicted Next Word:** {next_word}")
+
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#f0f2f6;
+                padding:20px;
+                border-radius:12px;
+                text-align:center;
+                margin-top:20px;
+            ">
+                <h3>✅ Predicted Next Word</h3>
+                <h1 style="color:#4CAF50;">{next_word}</h1>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+# ------------------------------
+# Info Section
+# ------------------------------
+with st.expander("ℹ️ About this App"):
+    st.write(
+        """
+        - Built using **LSTM Neural Network**
+        - Implemented with **TensorFlow & Keras**
+        - Deployed using **Streamlit Cloud**
+        - Predicts the most probable next word based on input text
+        """
+    )
 
 # ------------------------------
 # Footer
 # ------------------------------
 st.markdown("---")
-st.caption("LSTM-based Next Word Prediction using Streamlit")
+st.caption("🚀 Made with ❤️ using Deep Learning & Streamlit")
